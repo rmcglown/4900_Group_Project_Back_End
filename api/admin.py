@@ -10,14 +10,24 @@ class BookAdmin(admin.ModelAdmin):
     search_fields = ('title', 'isbn')
     list_filter =  ('genre',)
 
+    actions = ["delete_all_books"]
+
+    @admin.action(description="Delete ALL books")
+    def delete_all_books(self, request, queryset):
+        total = Book.objects.count()
+        Book.objects.all().delete()
+        self.message_user(
+            request, f"Deleted {total} book(s).", level=messages.SUCCESS
+        )
+
 class BookCopyAdmin(admin.ModelAdmin):
     list_display = ('book', 'status', 'added_date')
     list_filter = ('status', 'book')
 
 class LoanAdmin(admin.ModelAdmin):
     list_display = ('user', 'copy', 'loan_date', 'due_date', 'return_date', 'status')
-    list_filter = ('status',)
-    search_fields = ('user__username',)
+    list_filter = ('status','loan_date', 'due_date')
+    search_fields = ('user__username', 'copy__book__title')
 
 
 admin.site.register(Author, AuthorAdmin)
