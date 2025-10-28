@@ -10,8 +10,8 @@ from django.shortcuts import render
 @api_view(['GET'])
 def book_list(request):
     if request.method == 'GET':
-        movies = Book.objects.all()
-        serializer = BookSerializer(movies, many=True)
+        books = Book.objects.all()
+        serializer = BookSerializer(books, many=True)
         return Response({'data': serializer.data})
 
 
