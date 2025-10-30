@@ -31,8 +31,8 @@ urlpatterns = [
     path('api/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('', views.book_list),
-    path('api/movies/', views.book_list),
-
+    path('api/books/', views.book_list),
+    path('api/books/<int:pk>/', views.getBook),
     path('register/', RegisterView.as_view(), name='auth_register'),
 ]
 if settings.DEBUG == True:
