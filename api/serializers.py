@@ -1,16 +1,24 @@
 from rest_framework import serializers
-from .models import Book
+from .models import Book, Loan, BookCopy
 from django.contrib.auth.models import User
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 
 class BookSerializer(serializers.ModelSerializer):
     #book_image = serializers.ImageField(required= False)
-
     class Meta:
         model = Book
         fields = ('pk','author', 'title', 'isbn', 'genre', 'publication_date')
 
+class BookCopySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookCopy
+        fields = ('pk', 'book', 'status', 'added_date')
+class LoanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Loan
+        fields = ('pk','user', 'copy', 'loan_date', 'due_date', 'return_date', 'status')
+        read_only_fields = ('user', 'loan_date', 'status',)
 
 
 class RegisterSerializer(serializers.ModelSerializer):

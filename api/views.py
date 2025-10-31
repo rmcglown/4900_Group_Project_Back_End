@@ -1,8 +1,9 @@
+import datetime
 from rest_framework import status, generics
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from .serializers import *
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from django.contrib.auth.models import User
 from .serializers import RegisterSerializer
@@ -44,6 +45,32 @@ def getBook(request, pk):
     elif request.method == 'DELETE':
         book.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def checkout_book(request, copy_id):
+
+    try:
+        copy = BookCopy.objects.get(id=copy_id)
+    except BookCopy.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if copy.status != 'available':
+        return Response(status=status.HTTP_403_FORBIDDEN)
+
+    loan = Loan.objects.create(
+        user=request.user,
+        copy=copy,
+        loan_date= datetime.date.today(),
+        due_date= datetime.date.today() + datetime.timedelta(days=14),
+        status='borrowed',
+    )
+
+    copy.status = 'on_loan'
+    copy.save()
+
+    serializer = LoanSerializer(loan)
+    return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()

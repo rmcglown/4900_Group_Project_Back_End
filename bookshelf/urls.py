@@ -33,6 +33,7 @@ urlpatterns = [
     path('', views.book_list),
     path('api/books/', views.book_list),
     path('api/books/<int:pk>/', views.getBook),
+    path(r'api/checkout/<int:copy_id>/', views.checkout_book),
     path('register/', RegisterView.as_view(), name='auth_register'),
 ]
 if settings.DEBUG == True:
