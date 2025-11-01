@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from .models import Author, Book, BookCopy, Loan
 
 class AuthorAdmin(admin.ModelAdmin):
@@ -7,8 +7,8 @@ class AuthorAdmin(admin.ModelAdmin):
 
 class BookAdmin(admin.ModelAdmin):
     list_display = ('title', 'author', 'isbn', 'genre', 'publication_date')
-    search_fields = ('title', 'isbn')
-    list_filter =  ('genre',)
+    search_fields = ('title', 'isbn', 'author__first_name', 'author__last_name')
+    list_filter =  ('genre', 'publication_date', 'author')
 
     actions = ["delete_all_books"]
 
@@ -23,6 +23,7 @@ class BookAdmin(admin.ModelAdmin):
 class BookCopyAdmin(admin.ModelAdmin):
     list_display = ('book', 'status', 'added_date')
     list_filter = ('status', 'book')
+    search_fields = ('book__title',)
 
 class LoanAdmin(admin.ModelAdmin):
     list_display = ('user', 'copy', 'loan_date', 'due_date', 'return_date', 'status')
