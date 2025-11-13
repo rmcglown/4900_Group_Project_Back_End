@@ -72,6 +72,43 @@ def checkout_book(request, copy_id):
     serializer = LoanSerializer(loan)
     return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def pay_fine(request, loan_id):
+    try:
+        loan = Loan.objects.get(pk=loan_id)
+    except Loan.DoesNotExist:
+        return Response({'detail': 'Loan not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Only the loan owner or a librarian can pay this fine
+    is_librarian = request.user.groups.filter(name__iexact='librarian').exists()
+    if loan.user != request.user and not is_librarian:
+        return Response(
+            {'detail': 'You are not allowed to pay this fine.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    fine = loan.calculate_overdue_fine()
+    if fine <= 0:
+        return Response(
+            {'detail': 'There is no overdue fine to pay for this loan.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    loan.fine_paid_amount = fine
+    loan.fine_paid = True
+
+    # Optionally, when they pay, we treat the book as returned
+    if loan.status == 'overdue':
+        loan.status = 'returned'
+        if not loan.return_date:
+            loan.return_date = datetime.date.today()
+
+    loan.save()
+
+    serializer = LoanSerializer(loan)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)

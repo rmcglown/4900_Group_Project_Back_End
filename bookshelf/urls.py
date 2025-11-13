@@ -34,6 +34,7 @@ urlpatterns = [
     path('api/books/', views.book_list),
     path('api/books/<int:pk>/', views.getBook),
     path(r'api/checkout/<int:copy_id>/', views.checkout_book),
+    path('api/loans/<int:loan_id>/pay_fine/', views.pay_fine, name='pay_fine'),
     path('register/', RegisterView.as_view(), name='auth_register'),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}), #serve media files when deployed
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}), #serve static files when deployed
