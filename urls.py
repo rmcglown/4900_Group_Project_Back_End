@@ -25,8 +25,6 @@ from django.conf import settings
 from api import views
 from api.views import RegisterView
 
-
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-auth', include('rest_framework.urls')),
@@ -36,9 +34,8 @@ urlpatterns = [
     path('api/books/', views.book_list),
     path('api/books/<int:pk>/', views.getBook),
     path('register/', RegisterView.as_view(), name='auth_register'),
-
-
 ]
+
 if settings.DEBUG == True:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root =settings.STATIC_ROOT)
