@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
-
+from decimal import Decimal
+import datetime
 
 User = settings.AUTH_USER_MODEL
 
@@ -53,5 +54,39 @@ class Loan(models.Model):
     return_date = models.DateField(blank=True, null=True)
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='borrowed')
 
+    fine_paid = models.BooleanField(default=False)
+    fine_paid_amount = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+
+    DAILY_FINE_RATE = Decimal("0.50")
+
     def __str__(self):
         return f"Loan #{self.pk} - {self.copy} to {self.user}"
+    def is_overdue(self) -> bool:
+        """True if this loan is currently overdue."""
+        reference_date = self.return_date or datetime.date.today()
+        return reference_date > self.due_date and self.status in ("borrowed", "overdue")
+
+    def calculate_overdue_fine(self) -> Decimal:
+        # No fine logic if we can't compute yet
+        if getattr(self, "fine_paid", False):
+            return Decimal("0.00")
+        if not self.due_date:  #due date not entered yet
+            return Decimal("0.00")
+
+        reference_date = self.return_date or datetime.date.today()
+
+        # returned on/before due date or status says returned
+        if self.status == 'returned' and reference_date <= self.due_date:
+            return Decimal("0.00")
+
+        if reference_date <= self.due_date:
+            return Decimal("0.00")
+
+        days_overdue = (reference_date - self.due_date).days
+        rate = getattr(self, "DAILY_FINE_RATE", Decimal("0.50"))
+        return rate * days_overdue
+
+    @property
+    def current_fine(self) -> Decimal:
+        "admin display"
+        return self.calculate_overdue_fine()

@@ -1,17 +1,27 @@
 from rest_framework import serializers
-from .models import Book
+from .models import Book, Loan, BookCopy
 from django.contrib.auth.models import User
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 
 class BookSerializer(serializers.ModelSerializer):
     #book_image = serializers.ImageField(required= False)
-
     class Meta:
         model = Book
         fields = ('pk','author', 'title', 'isbn', 'genre', 'publication_date')
 
+class BookCopySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookCopy
+        fields = ('pk', 'book', 'status', 'added_date')
+class LoanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Loan
+        fields = ('pk','user', 'copy', 'loan_date', 'due_date', 'return_date', 'status', 'fine_paid', 'fine_paid_amount', 'outstanding_fine')
+        read_only_fields = ('user', 'loan_date', 'status','fine_paid', 'fine_paid_amount', 'outstanding_fine')
 
+    def get_outstanding_fine(self, obj):
+        return obj.calculate_overdue_fine()
 
 class RegisterSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(

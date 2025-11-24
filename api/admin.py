@@ -1,6 +1,6 @@
 from django.contrib import admin, messages
 from .models import Author, Book, BookCopy, Loan
-from django.utils import timezone
+import datetime
 
 class AuthorAdmin(admin.ModelAdmin):
     list_display = ('first_name', 'last_name', 'birth_date')
@@ -8,8 +8,8 @@ class AuthorAdmin(admin.ModelAdmin):
 
 class BookAdmin(admin.ModelAdmin):
     list_display = ('title', 'author', 'isbn', 'genre', 'publication_date')
-    search_fields = ('title', 'isbn')
-    list_filter =  ('genre',)
+    search_fields = ('title', 'isbn', 'author__first_name', 'author__last_name')
+    list_filter =  ('genre', 'publication_date', 'author')
 
     actions = ["delete_all_books"]
 
@@ -24,30 +24,38 @@ class BookAdmin(admin.ModelAdmin):
 class BookCopyAdmin(admin.ModelAdmin):
     list_display = ('book', 'status', 'added_date')
     list_filter = ('status', 'book')
+    search_fields = ('book__title',)
 
 class LoanAdmin(admin.ModelAdmin):
-    list_display = ('user', 'copy', 'loan_date', 'due_date', 'return_date', 'status')
-    list_filter = ('status','loan_date', 'due_date')
+    list_display = ('user', 'copy', 'loan_date', 'due_date', 'return_date', 'status', 'fine_paid', 'fine_paid_amount', 'admin_current_fine')
+    list_filter = ('status','loan_date', 'due_date', 'fine_paid', 'fine_paid_amount')
     search_fields = ('user__username', 'copy__book__title')
+    readonly_fields = ('admin_current_fine',)
+    actions = ['mark_fines_paid']
 
-    actions = ["mark_as_returned"]
+    def admin_current_fine(self, obj):
+        try:
+            val = obj.current_fine
+        except Exception:
+            return "-"
+        return "-" if val is None else f"{val:.2f}"
 
-    @admin.action(description="Return selected books")
-    def mark_as_returned(self, request, queryset):
-        count = 0
-        for loan in queryset.filter(status="borrowed"):
-            loan.copy.status = "available"
-            loan.status = "returned"
-            loan.return_date = timezone.now()
-            loan.copy.save()
-            loan.save()
-            count += 1
+    admin_current_fine.short_description = "Current fine (owed)"
 
-        self.message_user(
-            request,
-            f"{count} book(s) successfully returned.",
-            level=messages.SUCCESS
-        )
+    @admin.action(description="Mark selected loans' fines as paid (use current fine)")
+    def mark_fines_paid(self, request, queryset):
+        updated = 0
+        for loan in queryset:
+            fine = loan.calculate_overdue_fine()
+            if fine > 0:
+                loan.fine_paid_amount = fine
+                loan.fine_paid = True
+                if loan.status == 'overdue' and not loan.return_date:
+                    loan.return_date = datetime.date.today()
+                    loan.status = 'returned'
+                loan.save()
+                updated += 1
+        self.message_user(request, f"Marked {updated} loan(s) as paid.", level=messages.SUCCESS)
 
 admin.site.register(Author, AuthorAdmin)
 admin.site.register(Book, BookAdmin)
