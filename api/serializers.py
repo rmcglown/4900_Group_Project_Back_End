@@ -8,7 +8,7 @@ class BookSerializer(serializers.ModelSerializer):
     #book_image = serializers.ImageField(required= False)
     class Meta:
         model = Book
-        fields = ('pk','author', 'title', 'isbn', 'genre', 'publication_date')
+        fields = ('pk','author', 'title', 'isbn', 'genre', 'publication_date', 'description')
 
 class BookCopySerializer(serializers.ModelSerializer):
     class Meta:
