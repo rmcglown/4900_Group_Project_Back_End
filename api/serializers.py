@@ -6,9 +6,13 @@ from django.contrib.auth.password_validation import validate_password
 
 class BookSerializer(serializers.ModelSerializer):
     #book_image = serializers.ImageField(required= False)
+    author_name = serializers.CharField(
+        source='author',
+        read_only=True
+    )
     class Meta:
         model = Book
-        fields = ('pk','author', 'title', 'isbn', 'genre', 'publication_date', 'description')
+        fields = ('pk','author', 'author_name', 'title', 'isbn', 'genre', 'publication_date', 'description')
 
 class BookCopySerializer(serializers.ModelSerializer):
     class Meta:
