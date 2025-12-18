@@ -92,6 +92,16 @@ def my_fines(request):
 
     serializer = LoanSerializer(loans, many=True)
     return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_loans(request):
+    """
+    Returns all loans for the currently authenticated user.
+    """
+    loans = Loan.objects.filter(user=request.user).order_by("-loan_date", "-due_date")
+    serializer = LoanSerializer(loans, many=True)
+    return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def pay_fine(request, loan_id):
