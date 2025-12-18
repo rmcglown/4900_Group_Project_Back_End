@@ -27,7 +27,7 @@ class BookCopyAdmin(admin.ModelAdmin):
     search_fields = ('book__title',)
 
 class LoanAdmin(admin.ModelAdmin):
-    list_display = ('user', 'copy', 'loan_date', 'due_date', 'return_date', 'status', 'fine_paid', 'fine_paid_amount', 'admin_current_fine')
+    list_display = ('user', 'copy', 'loan_date', 'due_date', 'return_date', 'status', 'fine_paid', 'fine_paid_amount', 'fine_paid_at', 'admin_current_fine')
     list_filter = ('status','loan_date', 'due_date', 'fine_paid', 'fine_paid_amount')
     search_fields = ('user__username', 'copy__book__title')
     readonly_fields = ('admin_current_fine',)

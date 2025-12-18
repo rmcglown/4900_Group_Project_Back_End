@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from decimal import Decimal
+from django.utils import timezone
 import datetime
 
 User = settings.AUTH_USER_MODEL
@@ -56,7 +57,8 @@ class Loan(models.Model):
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='borrowed')
 
     fine_paid = models.BooleanField(default=False)
-    fine_paid_amount = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    fine_paid_amount = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
+    fine_paid_at = models.DateTimeField(blank=True, null=True)
 
     DAILY_FINE_RATE = Decimal("0.50")
 
@@ -69,7 +71,7 @@ class Loan(models.Model):
 
     def calculate_overdue_fine(self) -> Decimal:
         # No fine logic if we can't compute yet
-        if getattr(self, "fine_paid", False):
+        if self.fine_paid:
             return Decimal("0.00")
         if not self.due_date:  #due date not entered yet
             return Decimal("0.00")
@@ -87,7 +89,18 @@ class Loan(models.Model):
         rate = getattr(self, "DAILY_FINE_RATE", Decimal("0.50"))
         return rate * days_overdue
 
+    def mark_fine_paid(self, amount: Decimal) -> None:
+        """
+        Sets the loan fine as paid and records amount + time.
+        """
+        self.fine_paid = True
+        self.fine_paid_amount = (amount or Decimal("0.00")).quantize(Decimal("0.01"))
+        self.fine_paid_at = timezone.now()
     @property
     def current_fine(self) -> Decimal:
         "admin display"
+        return self.calculate_overdue_fine()
+    @property
+    def outstanding_fine(self) -> Decimal:
+        """Convenience for API usage."""
         return self.calculate_overdue_fine()

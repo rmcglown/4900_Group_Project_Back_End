@@ -6,7 +6,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from django.contrib.auth.models import User
-from .serializers import RegisterSerializer
+from .models import Book, BookCopy, Loan
+from .serializers import RegisterSerializer, BookSerializer, LoanSerializer
 from django.shortcuts import render
 def is_librarian(user):
     return user.groups.filter(name__iexact='librarian').exists()
@@ -77,7 +78,20 @@ def checkout_book(request, copy_id):
 
     serializer = LoanSerializer(loan)
     return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_fines(request):
+    today = datetime.date.today()
 
+    loans = Loan.objects.filter(
+        user=request.user,
+        fine_paid=False,
+        due_date__lt=today,
+        status__in=["borrowed", "overdue"],
+    ).order_by("-due_date")
+
+    serializer = LoanSerializer(loans, many=True)
+    return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def pay_fine(request, loan_id):
@@ -88,29 +102,26 @@ def pay_fine(request, loan_id):
 
     # Only the loan owner or a librarian can pay this fine
     is_librarian = request.user.groups.filter(name__iexact='librarian').exists()
-    if loan.user != request.user and not is_librarian:
-        return Response(
-            {'detail': 'You are not allowed to pay this fine.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    with transaction.atomic():
+        try:
+            loan = Loan.objects.select_for_update().get(pk=loan_id)
+        except Loan.DoesNotExist:
+            return Response({"detail": "Loan not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    fine = loan.calculate_overdue_fine()
-    if fine <= 0:
-        return Response(
-            {'detail': 'There is no overdue fine to pay for this loan.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        if loan.user != request.user and not is_librarian(request.user):
+            return Response({"detail": "You are not allowed to pay this fine."}, status=status.HTTP_403_FORBIDDEN)
 
-    loan.fine_paid_amount = fine
-    loan.fine_paid = True
+        if loan.fine_paid:
+            return Response({"detail": "This fine has already been paid."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Optionally, when they pay, we treat the book as returned
-    if loan.status == 'overdue':
-        loan.status = 'returned'
-        if not loan.return_date:
-            loan.return_date = datetime.date.today()
+        fine = loan.calculate_overdue_fine()
+        if fine <= 0:
+            return Response({"detail": "There is no overdue fine to pay for this loan."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-    loan.save()
+        # Mark paid + timestamp
+        loan.mark_fine_paid(fine)
+        loan.save()
 
     serializer = LoanSerializer(loan)
     return Response(serializer.data, status=status.HTTP_200_OK)
