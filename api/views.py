@@ -8,6 +8,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
 from .serializers import RegisterSerializer
 from django.shortcuts import render
+def is_librarian(user):
+    return user.groups.filter(name__iexact='librarian').exists()
 @api_view(['GET', 'POST'])
 def book_list(request):
     if request.method == 'GET':
@@ -15,8 +17,8 @@ def book_list(request):
         serializer = BookSerializer(books, many=True)
         return Response({'data': serializer.data})
     elif request.method == 'POST':
-        if not request.user.groups.filter(name__iexact='librarian').exists():
-            return Response({'message': 'You are not authorized to perform this action.'}, status = status.HTTP_401_UNAUTHORIZED)
+        if not is_librarian(request.user):
+            return Response({'message': 'You are not authorized to perform this action.'}, status = status.HTTP_403_FORBIDDEN)
         serializer = BookSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -36,6 +38,8 @@ def getBook(request, pk):
         return Response(serializer.data)
 
     elif request.method == 'PUT':
+        if not is_librarian(request.user):
+            return Response({'message': 'You are not authorized to perform this action.'}, status = status.HTTP_403_FORBIDDEN)
         serializer = BookSerializer(book, data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -43,6 +47,8 @@ def getBook(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
+        if not is_librarian(request.user):
+            return Response({'message': 'You are not authorized to perform this action.'}, status = status.HTTP_403_FORBIDDEN)
         book.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
