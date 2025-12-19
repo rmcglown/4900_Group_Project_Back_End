@@ -17,7 +17,8 @@ class BookSerializer(serializers.ModelSerializer):
 class BookCopySerializer(serializers.ModelSerializer):
     class Meta:
         model = BookCopy
-        fields = ('pk', 'book', 'status', 'added_date')
+        fields = ('pk', 'book', 'status', 'added_date',)
+
 class LoanSerializer(serializers.ModelSerializer):
     outstanding_fine = serializers.SerializerMethodField()
     class Meta:
