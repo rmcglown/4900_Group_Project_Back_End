@@ -83,6 +83,24 @@ def checkout_book(request, copy_id):
 
     serializer = LoanSerializer(loan)
     return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def return_book(request, loan_id):
+    try:
+        loan = Loan.objects.get(pk=loan_id)
+    except Loan.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if loan.user != request.user:
+        return Response(status=status.HTTP_403_FORBIDDEN)
+    loan.status = 'returned'
+    loan.return_date = datetime.date.today()
+    loan.save()
+    copy = loan.copy
+    copy.status = 'available'
+    copy.save()
+    return Response({'detail': 'Book returned'}, status=status.HTTP_200_OK)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def my_fines(request):
@@ -104,7 +122,7 @@ def my_loans(request):
     """
     Returns all loans for the currently authenticated user.
     """
-    loans = Loan.objects.filter(user=request.user).order_by("-loan_date", "-due_date")
+    loans = Loan.objects.filter(user=request.user).exclude(status='returned').order_by("-loan_date", "-due_date")
     serializer = LoanSerializer(loans, many=True)
     return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 @api_view(['POST'])
