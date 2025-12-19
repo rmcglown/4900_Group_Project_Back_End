@@ -23,8 +23,11 @@ class LoanSerializer(serializers.ModelSerializer):
     outstanding_fine = serializers.SerializerMethodField()
     class Meta:
         model = Loan
-        fields = ('pk','user', 'copy', 'loan_date', 'due_date', 'return_date', 'status', 'fine_paid', 'fine_paid_at', 'outstanding_fine')
+        fields = ('pk','user', 'copy', 'book_id', 'book_title', 'loan_date', 'due_date', 'return_date', 'status', 'fine_paid', 'fine_paid_at', 'outstanding_fine')
         read_only_fields = ('user', 'loan_date', 'status','fine_paid', 'fine_paid_amount','fine_paid_at','outstanding_fine')
+
+    book_id = serializers.CharField(source='copy.book.pk', read_only=True)
+    book_title = serializers.CharField(source='copy.book.title', read_only=True)
 
     def get_outstanding_fine(self, obj):
         return obj.calculate_overdue_fine()
